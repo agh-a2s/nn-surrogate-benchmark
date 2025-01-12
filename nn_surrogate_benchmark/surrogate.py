@@ -19,6 +19,7 @@ class MLP(pl.LightningModule):
         lr: float = 1e-3,
     ) -> None:
         super().__init__()
+        self.lr = lr
         self.save_hyperparameters()
 
         layers = []
@@ -55,12 +56,67 @@ class MLP(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        return AdamW(self.parameters(), lr=self.hparams.lr)
+        return AdamW(self.parameters(), lr=self.lr)
+
+
+class SobolevMLP(MLP):
+    """
+    Sobolev Training
+    Czarnecki, Wojciech M., et al. "Sobolev training for neural networks."
+    """
+
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_dims: list[int] = [512],
+        activation: Literal["tanh", "relu"] = "tanh",
+        lr: float = 1e-3,
+        lam1: float = 1e-5,
+    ):
+        super().__init__(
+            input_dim=input_dim,
+            hidden_dims=hidden_dims,
+            activation=activation,
+            lr=lr,
+        )
+        self.save_hyperparameters()
+
+        self.lam1 = lam1
+        self.input_dim = input_dim
+
+        self.mse = nn.MSELoss()
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch  # [batch_size, input_dim], [batch_size, 1 + input_dim]
+        x = x.detach().clone().requires_grad_(True)
+        output = self.net(x)
+        mse_func = self.mse(output, y[:, 0:1])
+        grad_output = torch.ones_like(output)
+        derivative_pred = torch.autograd.grad(
+            outputs=output,
+            inputs=x,
+            grad_outputs=grad_output,
+            create_graph=True,
+        )[0]
+
+        mse_deriv = self.mse(derivative_pred, y[:, 1 : (self.input_dim + 1)])
+
+        loss = mse_func + self.lam1 * mse_deriv
+
+        self.log("train/mse_func", mse_func)
+        self.log("train/mse_deriv", mse_deriv)
+        self.log("train/loss", loss)
+        return loss
+
+    def configure_optimizers(self):
+        """Use Adam + StepLR as an example."""
+        return AdamW(self.parameters(), lr=self.lr)
 
 
 def prepare_dataloaders(
     file_path: str,
-    batch_size: int = 128,
+    use_sobolev: bool = False,
+    batch_size: int = 256,
     train_perc: float = 0.6,
     val_perc: float = 0.2,
 ) -> tuple[DataLoader, DataLoader, DataLoader]:
@@ -68,8 +124,9 @@ def prepare_dataloaders(
     assert train_perc + val_perc < 1, "train_perc + val_perc must be less than 1"
 
     data_df = pd.read_csv(file_path)
-    X = data_df.drop(columns=["y"]).values
-    y = data_df["y"].values.reshape(-1, 1)
+    X = data_df[["k1", "k2", "k3"]].values
+    y = data_df[["y", "dy_dk1", "dy_dk2", "dy_dk3"]].values
+    # y = data_df["y"].values.reshape(-1, 1)
 
     num_samples = X.shape[0]
     indices = np.random.permutation(num_samples)
@@ -105,15 +162,15 @@ def prepare_dataloaders(
 
 if __name__ == "__main__":
 
-    model = MLP(input_dim=3)
+    model = SobolevMLP(input_dim=3)
     train_dataloder, val_dataloader, test_dataloader = prepare_dataloaders(
-        file_path="heat_inversion.csv"
+        file_path="heat_inversion_uniform.csv"
     )
     tb_logger = TensorBoardLogger(
         save_dir="lightning_logs", name="surrogate_experiment"
     )
     trainer = Trainer(
-        max_epochs=1000,
+        max_epochs=10000,
         logger=tb_logger,
         log_every_n_steps=10,
     )
