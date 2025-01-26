@@ -24,7 +24,14 @@ class MLP(pl.LightningModule):
 
         layers = []
         for hidden_dim in hidden_dims:
-            layers.append(nn.Linear(input_dim, hidden_dim))
+            linear_layer = nn.Linear(input_dim, hidden_dim)
+            if activation == "tanh":
+                nn.init.xavier_normal_(
+                    linear_layer.weight, gain=nn.init.calculate_gain("tanh")
+                )
+            else:
+                nn.init.kaiming_normal_(linear_layer.weight, nonlinearity="relu")
+            layers.append(linear_layer)
             layers.append(nn.Tanh() if activation == "tanh" else nn.ReLU())
             input_dim = hidden_dim
         layers.append(nn.Linear(input_dim, 1))
@@ -59,63 +66,8 @@ class MLP(pl.LightningModule):
         return AdamW(self.parameters(), lr=self.lr)
 
 
-class SobolevMLP(MLP):
-    """
-    Sobolev Training
-    Czarnecki, Wojciech M., et al. "Sobolev training for neural networks."
-    """
-
-    def __init__(
-        self,
-        input_dim: int,
-        hidden_dims: list[int] = [512],
-        activation: Literal["tanh", "relu"] = "tanh",
-        lr: float = 1e-3,
-        lam1: float = 1e-5,
-    ):
-        super().__init__(
-            input_dim=input_dim,
-            hidden_dims=hidden_dims,
-            activation=activation,
-            lr=lr,
-        )
-        self.save_hyperparameters()
-
-        self.lam1 = lam1
-        self.input_dim = input_dim
-
-        self.mse = nn.MSELoss()
-
-    def training_step(self, batch, batch_idx):
-        x, y = batch  # [batch_size, input_dim], [batch_size, 1 + input_dim]
-        x = x.detach().clone().requires_grad_(True)
-        output = self.net(x)
-        mse_func = self.mse(output, y[:, 0:1])
-        grad_output = torch.ones_like(output)
-        derivative_pred = torch.autograd.grad(
-            outputs=output,
-            inputs=x,
-            grad_outputs=grad_output,
-            create_graph=True,
-        )[0]
-
-        mse_deriv = self.mse(derivative_pred, y[:, 1 : (self.input_dim + 1)])
-
-        loss = mse_func + self.lam1 * mse_deriv
-
-        self.log("train/mse_func", mse_func)
-        self.log("train/mse_deriv", mse_deriv)
-        self.log("train/loss", loss)
-        return loss
-
-    def configure_optimizers(self):
-        """Use Adam + StepLR as an example."""
-        return AdamW(self.parameters(), lr=self.lr)
-
-
 def prepare_dataloaders(
     file_path: str,
-    use_sobolev: bool = False,
     batch_size: int = 256,
     train_perc: float = 0.6,
     val_perc: float = 0.2,
@@ -125,8 +77,7 @@ def prepare_dataloaders(
 
     data_df = pd.read_csv(file_path)
     X = data_df[["k1", "k2", "k3"]].values
-    y = data_df[["y", "dy_dk1", "dy_dk2", "dy_dk3"]].values
-    # y = data_df["y"].values.reshape(-1, 1)
+    y = data_df["y"].values.reshape(-1, 1)
 
     num_samples = X.shape[0]
     indices = np.random.permutation(num_samples)
@@ -162,7 +113,7 @@ def prepare_dataloaders(
 
 if __name__ == "__main__":
 
-    model = SobolevMLP(input_dim=3)
+    model = MLP(input_dim=3, lr=1e-4, hidden_dims=[512, 512])
     train_dataloder, val_dataloader, test_dataloader = prepare_dataloaders(
         file_path="heat_inversion_uniform.csv"
     )

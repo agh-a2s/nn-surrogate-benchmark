@@ -14,7 +14,11 @@ numpy = "^2.2.1"
 tensorboard = "^2.18.0"
 pre-commit = "^4.0.1"
 ruff = "^0.9.1"
+matplotlib = "^3.10.0"
 
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.5"
 
 [build-system]
 requires = ["poetry-core"]
