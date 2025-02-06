@@ -6,7 +6,6 @@ from pflacco.classical_ela_features import (
     calculate_dispersion,
     calculate_nbc,
     calculate_ela_meta,
-    calculate_cm_angle,
     calculate_information_content,
 )
 
@@ -69,8 +68,10 @@ class SurrogateELAComparator:
         return np.vstack(X_list), np.vstack(y_list)
 
     def _calculate_ela_features(self, X: np.ndarray, y: np.ndarray) -> dict[str, float]:
-        """Calculate ELA features for given X and y."""
         features: dict[str, float] = {}
+
+        if y.ndim > 1:
+            y = y.reshape(-1)
 
         disp = calculate_dispersion(X, y)
         features.update(disp)
@@ -84,8 +85,6 @@ class SurrogateELAComparator:
         ic = calculate_information_content(X, y, seed=100)
         features.update(ic)
 
-        cm = calculate_cm_angle(X, y)
-        features.update(cm)
         return features
 
     def compare_features(

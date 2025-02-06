@@ -1,11 +1,8 @@
 import torch
 from torch import nn
 from torch.optim import AdamW
-from torch.optim.lr_scheduler import OneCycleLR
 from typing import Literal
 import pytorch_lightning as pl
-from pytorch_lightning import Trainer
-from pytorch_lightning.loggers import TensorBoardLogger
 import pandas as pd
 import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
@@ -155,34 +152,3 @@ def prepare_dataloaders(
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size)
 
     return train_dataloader, val_dataloader, test_dataloader
-
-
-if __name__ == "__main__":
-    total_epochs = 100
-    model = MLP(
-        input_dim=3,
-        lr=1e-3,
-        hidden_dims=[512],
-        activation="relu",
-    )
-    train_dataloder, val_dataloader, test_dataloader = prepare_dataloaders(
-        file_path="heat_inversion_lhs.csv",
-        scaler_type="minmax",
-    )
-    tb_logger = TensorBoardLogger(
-        save_dir="lightning_logs", name="surrogate_experiment"
-    )
-    trainer = Trainer(
-        max_epochs=total_epochs,
-        logger=tb_logger,
-        log_every_n_steps=10,
-        accelerator="gpu",
-        devices=1,
-    )
-
-    trainer.fit(model, train_dataloder, val_dataloader)
-    trainer.test(model, test_dataloader)
-
-    model_path = "surrogate_model.pt"
-    torch.save(model.state_dict(), model_path)
-    print(f"Model saved to {model_path}")
