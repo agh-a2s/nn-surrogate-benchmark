@@ -6,7 +6,12 @@ import pytorch_lightning as pl
 import pandas as pd
 import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, MaxAbsScaler
+from sklearn.preprocessing import (
+    StandardScaler,
+    MinMaxScaler,
+    RobustScaler,
+    MaxAbsScaler,
+)
 
 
 class MLP(pl.LightningModule):
@@ -14,7 +19,7 @@ class MLP(pl.LightningModule):
         self,
         input_dim: int,
         hidden_dims: list[int] = [512],
-        activation: Literal["tanh", "relu"] = "tanh",
+        activation: Literal["tanh", "relu", "gelu"] = "tanh",
         lr: float = 1e-3,
     ) -> None:
         super().__init__()
@@ -23,7 +28,12 @@ class MLP(pl.LightningModule):
         layers = []
         for hidden_dim in hidden_dims:
             layers.append(nn.Linear(input_dim, hidden_dim))
-            layers.append(nn.Tanh() if activation == "tanh" else nn.ReLU())
+            if activation == "tanh":
+                layers.append(nn.Tanh())
+            elif activation == "relu":
+                layers.append(nn.ReLU())
+            else:
+                layers.append(nn.GELU())
             input_dim = hidden_dim
         layers.append(nn.Linear(input_dim, 1))
         self.net = nn.Sequential(*layers)
@@ -32,11 +42,11 @@ class MLP(pl.LightningModule):
 
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
-            if self.hparams.activation == "relu":
+            if self.hparams.activation in ["relu", "gelu"]:
                 nn.init.kaiming_normal_(module.weight, nonlinearity="relu")
             else:
                 nn.init.xavier_normal_(
-                    module.weight, gain=nn.init.calculate_gain("tanh")
+                    module.weight, gain=nn.init.calculate_gain(self.hparams.activation)
                 )
 
             if module.bias is not None:
@@ -116,7 +126,10 @@ def prepare_dataloaders(
     X_val, y_val = X[val_idx], y[val_idx]
     X_test, y_test = X[test_idx], y[test_idx]
 
-    if scaler_type.lower() == "minmax":
+    if scaler_type is None:
+        scaler_x = None
+        scaler_y = None
+    elif scaler_type.lower() == "minmax":
         scaler_x = MinMaxScaler()
         scaler_y = MinMaxScaler()
     elif scaler_type.lower() == "standard":
@@ -129,15 +142,19 @@ def prepare_dataloaders(
         scaler_x = MaxAbsScaler()
         scaler_y = MaxAbsScaler()
     else:
-        raise ValueError("scaler_type must be one of: 'minmax', 'standard', 'robust', 'maxabs'")
+        raise ValueError(
+            "scaler_type must be one of: 'minmax', 'standard', 'robust', 'maxabs'"
+        )
 
-    X_train = scaler_x.fit_transform(X_train)
-    X_val = scaler_x.transform(X_val)
-    X_test = scaler_x.transform(X_test)
+    if scaler_x is not None:
+        X_train = scaler_x.fit_transform(X_train)
+        X_val = scaler_x.transform(X_val)
+        X_test = scaler_x.transform(X_test)
 
-    y_train = scaler_y.fit_transform(y_train)
-    y_val = scaler_y.transform(y_val)
-    y_test = scaler_y.transform(y_test)
+    if scaler_y is not None:
+        y_train = scaler_y.fit_transform(y_train)
+        y_val = scaler_y.transform(y_val)
+        y_test = scaler_y.transform(y_test)
 
     X_train = torch.tensor(X_train, dtype=torch.float32)
     y_train = torch.tensor(y_train, dtype=torch.float32)
