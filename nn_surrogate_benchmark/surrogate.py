@@ -6,7 +6,7 @@ import pytorch_lightning as pl
 import pandas as pd
 import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, MaxAbsScaler
 
 
 class MLP(pl.LightningModule):
@@ -93,7 +93,7 @@ def prepare_dataloaders(
         batch_size: Batch size for dataloaders
         train_perc: Percentage of data for training
         val_perc: Percentage of data for validation
-        scaler_type: Type of scaling to use ('minmax', 'standard', or 'robust')
+        scaler_type: Type of scaling to use ('minmax', 'standard', 'robust', or 'maxabs')
     """
     assert train_perc > 0 and val_perc > 0, "train_perc and val_perc must be positive"
     assert train_perc + val_perc < 1, "train_perc + val_perc must be less than 1"
@@ -125,8 +125,11 @@ def prepare_dataloaders(
     elif scaler_type.lower() == "robust":
         scaler_x = RobustScaler()
         scaler_y = RobustScaler()
+    elif scaler_type.lower() == "maxabs":
+        scaler_x = MaxAbsScaler()
+        scaler_y = MaxAbsScaler()
     else:
-        raise ValueError("scaler_type must be one of: 'minmax', 'standard', 'robust'")
+        raise ValueError("scaler_type must be one of: 'minmax', 'standard', 'robust', 'maxabs'")
 
     X_train = scaler_x.fit_transform(X_train)
     X_val = scaler_x.transform(X_val)
