@@ -94,6 +94,7 @@ def prepare_dataloaders(
     train_perc: float = 0.6,
     val_perc: float = 0.2,
     scaler_type: str = "minmax",
+    column_names: list[str] = ["k1", "k2", "k3"],
 ) -> tuple[DataLoader, DataLoader, DataLoader]:
     """
     Prepare train, validation and test dataloaders with specified scaling.
@@ -104,12 +105,13 @@ def prepare_dataloaders(
         train_perc: Percentage of data for training
         val_perc: Percentage of data for validation
         scaler_type: Type of scaling to use ('minmax', 'standard', 'robust', or 'maxabs')
+        column_names: Column names for the input features
     """
     assert train_perc > 0 and val_perc > 0, "train_perc and val_perc must be positive"
     assert train_perc + val_perc < 1, "train_perc + val_perc must be less than 1"
 
     data_df = pd.read_csv(file_path)
-    X = data_df[["k1", "k2", "k3"]].values
+    X = data_df[column_names].values
     y = data_df["y"].values.reshape(-1, 1)
 
     num_samples = X.shape[0]
@@ -171,4 +173,4 @@ def prepare_dataloaders(
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size)
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size)
 
-    return train_dataloader, val_dataloader, test_dataloader
+    return train_dataloader, val_dataloader, test_dataloader, scaler_x, scaler_y
