@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
-from time import perf_counter
 from tqdm import tqdm
-from joblib import Parallel, delayed
 from pyDOE2 import lhs
 from cocoex import Suite
 

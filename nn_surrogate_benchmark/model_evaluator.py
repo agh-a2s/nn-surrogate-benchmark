@@ -8,6 +8,8 @@ from sklearn.preprocessing import (
     RobustScaler,
     MaxAbsScaler,
 )
+import matplotlib.pyplot as plt
+from pytorch_lightning.loggers import TensorBoardLogger
 
 
 class ModelEvaluator:
@@ -19,14 +21,18 @@ class ModelEvaluator:
     def __init__(
         self,
         model: torch.nn.Module,
-        scaler_y: MinMaxScaler | StandardScaler | RobustScaler | MaxAbsScaler | None = None,
+        scaler_y: (
+            MinMaxScaler | StandardScaler | RobustScaler | MaxAbsScaler | None
+        ) = None,
         device: str = "cpu",
+        tb_logger: TensorBoardLogger | None = None,
     ) -> None:
         self.model = model
         self.device = device
         self.model.to(device)
         self.model.eval()
         self.scaler_y = scaler_y
+        self.tb_logger = tb_logger
 
     def _prepare_data(
         self, X: torch.Tensor | np.ndarray, y: torch.Tensor | np.ndarray | None = None
@@ -62,7 +68,7 @@ class ModelEvaluator:
     ) -> pd.DataFrame:
         X, y_true_scaled = self._extract_from_dataloader(dataloader)
         y_pred_scaled = self._get_predictions(X)
-        results = pd.DataFrame(X, columns=["k1", "k2", "k3"])
+        results = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
 
         results["y_true_scaled"] = y_true_scaled
         results["y_pred_scaled"] = y_pred_scaled
@@ -106,3 +112,38 @@ class ModelEvaluator:
             results["test"] = self.evaluate_dataset(test_loader, "test")
 
         return results
+
+    def log_metrics_to_tensorboard(
+        self,
+        results: dict[str, pd.DataFrame],
+        current_epoch: int,
+    ) -> None:
+        if self.tb_logger is None:
+            return
+
+        for dataset_name, df in results.items():
+            self.tb_logger.experiment.add_histogram(
+                f"{dataset_name}/absolute_errors", df["abs_error"].values, current_epoch
+            )
+            self.tb_logger.experiment.add_histogram(
+                f"{dataset_name}/relative_errors", df["rel_error"].values, current_epoch
+            )
+
+            fig = plt.figure(figsize=(5, 5))
+            plt.scatter(df["y_true"], df["y_pred"], alpha=0.5)
+            plt.plot(
+                [df["y_true"].min(), df["y_true"].max()],
+                [df["y_true"].min(), df["y_true"].max()],
+                "r--",
+                label="Perfect prediction",
+            )
+            plt.xlabel("True values")
+            plt.ylabel("Predicted values")
+            plt.title(f"{dataset_name.capitalize()} Set: Predictions vs True Values")
+            plt.legend()
+            self.tb_logger.experiment.add_figure(
+                f"{dataset_name}/predictions_vs_true",
+                fig,
+                current_epoch,
+            )
+            plt.close(fig)

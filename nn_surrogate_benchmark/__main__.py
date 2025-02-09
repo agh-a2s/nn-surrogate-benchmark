@@ -53,11 +53,13 @@ if __name__ == "__main__":
     for key, value in results.items():
         value.to_csv(f"ela_{key}_{current_datetime}.csv", index=False)
 
-    evaluator = ModelEvaluator(model, scaler_y=scaler_y)
+    evaluator = ModelEvaluator(model, scaler_y=scaler_y, tb_logger=tb_logger)
     results = evaluator.evaluate_multiple_sets(
         train_loader=train_dataloder,
         val_loader=val_dataloader,
         test_loader=test_dataloader,
     )
+    evaluator.log_metrics_to_tensorboard(results, total_epochs)
+
     for key, value in results.items():
         value.to_csv(f"value_{key}_{current_datetime}.csv", index=False)
