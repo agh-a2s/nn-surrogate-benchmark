@@ -5,11 +5,38 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
 from datetime import datetime
 import torch
+import socket
+import subprocess
+import time
+import webbrowser
+
+
+def is_port_in_use(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(("localhost", port)) == 0
+
+
+def ensure_tensorboard_running(logdir: str, port: int = 6006) -> None:
+    if not is_port_in_use(port):
+        print(f"Starting TensorBoard on port {port}...")
+        subprocess.Popen(
+            ["tensorboard", "--logdir", logdir, "--port", str(port)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        time.sleep(5)
+        webbrowser.open(f"http://localhost:{port}")
+    else:
+        print(f"TensorBoard already running on port {port}")
+
 
 if __name__ == "__main__":
     column_names = ["x1", "x2"]
     file_path = "bbob_f001_i01_d02_samples.csv"
     experiment_name = "bbob_f001"
+    tensorboard_dir = "lightning_logs"
+
+    ensure_tensorboard_running(tensorboard_dir)
 
     current_datetime = datetime.now().strftime("%Y%m%d_%H%M")
     total_epochs = 100
@@ -26,7 +53,7 @@ if __name__ == "__main__":
             column_names=column_names,
         )
     )
-    tb_logger = TensorBoardLogger(save_dir="lightning_logs", name=experiment_name)
+    tb_logger = TensorBoardLogger(save_dir=tensorboard_dir, name=experiment_name)
     trainer = Trainer(
         max_epochs=total_epochs,
         logger=tb_logger,
