@@ -145,9 +145,9 @@ def plotLoss(lossTotal, lossRegular, lossDerivatives):
 
 
 if __name__ == "__main__":
-    data_df = pd.read_csv("heat_inversion_uniform.csv")
-    train_x = torch.tensor(data_df[["k1", "k2", "k3"]].values).float()
-    train_y = torch.tensor(data_df[["y", "dy_dk1", "dy_dk2", "dy_dk3"]].values).float()
+    data_df = pd.read_csv("data/heat_inversion_lhs.csv")
+    train_x = torch.tensor(data_df[["x1", "x2", "x3"]].values).float()
+    train_y = torch.tensor(data_df[["y", "dy_dx1", "dy_dx2", "dy_dx3"]].values).float()
 
     x, y = Variable(train_x), Variable(train_y)
 
