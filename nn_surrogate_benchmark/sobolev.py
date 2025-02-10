@@ -5,7 +5,6 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 import torch.optim as optim
 
-from matplotlib import cm
 import pandas as pd
 import numpy as np
 import copy
@@ -124,7 +123,7 @@ def getDerivatives(x):
     nn = output.shape[0]
     gradx = np.zeros((nn, 2))
     for ii in range(output.shape[0]):
-        y_def = output[ii].backward(retain_graph=True)
+        y_def = output[ii].backward(retain_graph=True)  # noqa: F841
         gradx[ii, :] = x1.grad[ii]
     return gradx
 
