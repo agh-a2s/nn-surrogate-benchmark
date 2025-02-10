@@ -23,7 +23,6 @@ class MLP(pl.LightningModule):
         lr: float = 1e-3,
     ) -> None:
         super().__init__()
-        self.lr = lr
         self.save_hyperparameters()
 
         layers = []
