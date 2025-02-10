@@ -3,6 +3,7 @@ import pandas as pd
 from tqdm import tqdm
 from pyDOE2 import lhs
 from cocoex import Suite
+import os
 
 
 def generate_lhs_samples(
@@ -30,12 +31,15 @@ def main():
     DIMENSIONS = 2
     INSTANCE_ID = 1
     FUNCTION_ID = 1
+    DATA_DIR = "data"
 
     suite = Suite(
         "bbob",
         f"instances: {FUNCTION_ID}",
         f"dimensions: {DIMENSIONS} instance_indices: {INSTANCE_ID}",
     )
+
+    os.makedirs(DATA_DIR, exist_ok=True)
 
     for function in suite:
         print(
@@ -59,7 +63,7 @@ def main():
             )
 
         df = pd.DataFrame(rows)
-        filename = f"{function.id}_samples.csv"
+        filename = f"{DATA_DIR}/{function.id}_samples.csv"
         df.to_csv(filename, index=False)
         print(f"Saved to {filename}")
 

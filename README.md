@@ -8,6 +8,29 @@ To install:
 poetry install --with dev
 ```
 
+## Generating Test Data
+
+### BBOB Test Functions
+The repository includes functionality to generate sample data from BBOB (Black-Box Optimization Benchmark) test functions:
+
+```bash
+poetry run python -m nn_surrogate_benchmark.bbob_sampler
+```
+
+This will:
+- Generate 10,000 Latin Hypercube samples for a 2D BBOB function
+- Save the samples to a CSV file named `{function_id}_samples.csv`
+- Use the standard format (x1, x2, y columns) required by the surrogate model
+
+Default settings:
+- Sampling bounds: [-5.0, 5.0]
+- Number of samples: 10,000
+- Dimensions: 2
+- Function ID: 1 (Sphere function)
+- Instance ID: 1
+
+To modify these parameters, edit the constants in `bbob_sampler.py`.
+
 ## Data Format
 
 The input data should be in CSV format with the following structure:
