@@ -68,7 +68,7 @@ class ModelEvaluator:
     ) -> pd.DataFrame:
         X, y_true_scaled = self._extract_from_dataloader(dataloader)
         y_pred_scaled = self._get_predictions(X)
-        results = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
+        results = pd.DataFrame(X, columns=[f"x{i+1}" for i in range(X.shape[1])])
 
         results["y_true_scaled"] = y_true_scaled
         results["y_pred_scaled"] = y_pred_scaled
@@ -89,9 +89,7 @@ class ModelEvaluator:
             / np.abs(results["y_true"])
             * 100
         )
-
         results["dataset"] = dataset_name
-
         return results
 
     def evaluate_multiple_sets(
@@ -128,22 +126,56 @@ class ModelEvaluator:
             self.tb_logger.experiment.add_histogram(
                 f"{dataset_name}/relative_errors", df["rel_error"].values, current_epoch
             )
+            self._log_prediction_plot(df, dataset_name, current_epoch)
+            self._log_contour_plots(df, dataset_name, current_epoch)
 
-            fig = plt.figure(figsize=(5, 5))
-            plt.scatter(df["y_true"], df["y_pred"], alpha=0.5)
-            plt.plot(
-                [df["y_true"].min(), df["y_true"].max()],
-                [df["y_true"].min(), df["y_true"].max()],
-                "r--",
-                label="Perfect prediction",
-            )
-            plt.xlabel("True values")
-            plt.ylabel("Predicted values")
-            plt.title(f"{dataset_name.capitalize()} Set: Predictions vs True Values")
-            plt.legend()
-            self.tb_logger.experiment.add_figure(
-                f"{dataset_name}/predictions_vs_true",
-                fig,
-                current_epoch,
-            )
-            plt.close(fig)
+    def _log_prediction_plot(
+        self, df: pd.DataFrame, dataset_name: str, current_epoch: int
+    ) -> None:
+        fig = plt.figure(figsize=(5, 5))
+        plt.scatter(df["y_true"], df["y_pred"], alpha=0.5)
+        plt.plot(
+            [df["y_true"].min(), df["y_true"].max()],
+            [df["y_true"].min(), df["y_true"].max()],
+            "r--",
+            label="Perfect prediction",
+        )
+        plt.xlabel("True values")
+        plt.ylabel("Predicted values")
+        plt.title(f"{dataset_name.capitalize()} Set: Predictions vs True Values")
+        plt.legend()
+        self.tb_logger.experiment.add_figure(
+            f"{dataset_name}/predictions_vs_true",
+            fig,
+            current_epoch,
+        )
+        plt.close(fig)
+
+    def _log_contour_plots(
+        self, df: pd.DataFrame, dataset_name: str, current_epoch: int
+    ) -> None:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+        x1_vals = np.linspace(df["x1"].min(), df["x1"].max(), 100)
+        x2_vals = np.linspace(df["x2"].min(), df["x2"].max(), 100)
+        X1, X2 = np.meshgrid(x1_vals, x2_vals)
+
+        true_contour = ax1.tricontourf(df["x1"], df["x2"], df["y_true"])
+        ax1.set_title(f"{dataset_name.capitalize()}: True Values")
+        ax1.set_xlabel("x1")
+        ax1.set_ylabel("x2")
+        plt.colorbar(true_contour, ax=ax1)
+
+        pred_contour = ax2.tricontourf(df["x1"], df["x2"], df["y_pred"])
+        ax2.set_title(f"{dataset_name.capitalize()}: Predicted Values")
+        ax2.set_xlabel("x1")
+        ax2.set_ylabel("x2")
+        plt.colorbar(pred_contour, ax=ax2)
+
+        plt.tight_layout()
+        self.tb_logger.experiment.add_figure(
+            f"{dataset_name}/contour_comparison",
+            fig,
+            current_epoch,
+        )
+        plt.close(fig)

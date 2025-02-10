@@ -90,11 +90,11 @@ class MLP(pl.LightningModule):
 
 def prepare_dataloaders(
     file_path: str,
+    column_names: list[str],
     batch_size: int = 256,
     train_perc: float = 0.6,
     val_perc: float = 0.2,
     scaler_type: str = "minmax",
-    column_names: list[str] = ["k1", "k2", "k3"],
 ) -> tuple[DataLoader, DataLoader, DataLoader]:
     """
     Prepare train, validation and test dataloaders with specified scaling.

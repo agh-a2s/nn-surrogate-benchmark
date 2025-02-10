@@ -32,14 +32,14 @@ def ensure_tensorboard_running(logdir: str, port: int = 6006) -> None:
 
 if __name__ == "__main__":
     column_names = ["x1", "x2"]
-    file_path = "bbob_f001_i01_d02_samples.csv"
-    experiment_name = "bbob_f001"
+    file_path = "bbob_f003_i01_d02_samples.csv"
+    experiment_name = "bbob_f002"
     tensorboard_dir = "lightning_logs"
+    total_epochs = 100
 
     ensure_tensorboard_running(tensorboard_dir)
 
     current_datetime = datetime.now().strftime("%Y%m%d_%H%M")
-    total_epochs = 100
     model = MLP(
         input_dim=len(column_names),
         lr=1e-3,
