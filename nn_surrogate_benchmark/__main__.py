@@ -31,7 +31,7 @@ def ensure_tensorboard_running(logdir: str, port: int = 6006) -> None:
 
 if __name__ == "__main__":
     column_names = ["x1", "x2"]
-    file_path = "bbob_f003_i01_d02_samples.csv"
+    file_path = "data/bbob_f003_i01_d02_samples.csv"
     experiment_name = "bbob_f002"
     tensorboard_dir = "lightning_logs"
     total_epochs = 100
