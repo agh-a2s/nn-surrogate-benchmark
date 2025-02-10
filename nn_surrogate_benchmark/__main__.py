@@ -4,7 +4,6 @@ from .model_evaluator import ModelEvaluator
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
 from datetime import datetime
-import torch
 import socket
 import subprocess
 import time
@@ -65,11 +64,6 @@ if __name__ == "__main__":
     trainer.fit(model, train_dataloder, val_dataloader)
     trainer.test(model, test_dataloader)
 
-    model_path = "surrogate_model.pt"
-    torch.save(model.state_dict(), model_path)
-    print(f"Model saved to {model_path}")
-
-    # model.load_state_dict(torch.load("surrogate_model.pt"))
     comparator = SurrogateELAComparator(model, device="cpu")
     results = comparator.compare_multiple_sets(
         train_loader=train_dataloder,
