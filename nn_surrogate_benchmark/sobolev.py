@@ -145,20 +145,20 @@ def plotLoss(lossTotal, lossRegular, lossDerivatives):
 
 
 if __name__ == "__main__":
-    data_df = pd.read_csv("data/heat_inversion_lhs.csv")
-    train_x = torch.tensor(data_df[["x1", "x2", "x3"]].values).float()
-    train_y = torch.tensor(data_df[["y", "dy_dx1", "dy_dx2", "dy_dx3"]].values).float()
+    data_df = pd.read_csv("data/bbob_f022_i01_d02_g_samples.csv")
+    train_x = torch.tensor(data_df[["x1", "x2"]].values).float()
+    train_y = torch.tensor(data_df[["y", "dy_dx1", "dy_dx2"]].values).float()
 
     x, y = Variable(train_x), Variable(train_y)
 
-    net = Net(inp=3, out=1, activation=nn.Tanh(), num_hidden_units=256, num_layers=2)
+    net = Net(inp=2, out=1, activation=nn.Tanh(), num_hidden_units=256, num_layers=2)
 
     optimizer = torch.optim.Adam(net.parameters(), lr=3e-4, weight_decay=1e-6)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.5)
     loss_func = torch.nn.MSELoss()
 
     BATCH_SIZE = 100
-    EPOCH = 10000
+    EPOCH = 400
     num_data = train_x.shape[0]
     torch_dataset = Data.TensorDataset(x, y)
 
