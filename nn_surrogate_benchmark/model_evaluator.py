@@ -54,8 +54,8 @@ class ModelEvaluator:
     ) -> tuple[np.ndarray, np.ndarray]:
         X_list, y_list = [], []
 
-        for X_batch, y_batch in dataloader:
-            batch_X, batch_y = self._prepare_data(X_batch, y_batch)
+        for batch in dataloader:
+            batch_X, batch_y = self._prepare_data(batch[0], batch[1])
             X_list.append(batch_X)
             y_list.append(batch_y)
 
@@ -67,7 +67,9 @@ class ModelEvaluator:
         dataset_name: str,
     ) -> pd.DataFrame:
         X, y_true_scaled = self._extract_from_dataloader(dataloader)
+        y_true_scaled = y_true_scaled.flatten()
         y_pred_scaled = self._get_predictions(X)
+        y_pred_scaled = y_pred_scaled.flatten()
         results = pd.DataFrame(X, columns=[f"x{i+1}" for i in range(X.shape[1])])
 
         results["y_true_scaled"] = y_true_scaled
@@ -97,6 +99,7 @@ class ModelEvaluator:
         train_loader: DataLoader | None = None,
         val_loader: DataLoader | None = None,
         test_loader: DataLoader | None = None,
+        grads = False,
     ) -> dict[str, pd.DataFrame]:
         results = {}
 

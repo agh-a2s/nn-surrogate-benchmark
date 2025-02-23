@@ -35,25 +35,27 @@ if __name__ == "__main__":
     input_column_names = ["x1", "x2"]
     output_column_names = ["y", "dy_dx1", "dy_dx2"]
     file_path = "data/bbob_f022_i01_d02_g_samples.csv"
-    experiment_name = "bbob_f022"
+    experiment_name = "bbob_f022_g"
     tensorboard_dir = "lightning_logs"
-    total_epochs = 2000
+    total_epochs = 1000
 
     ensure_tensorboard_running(tensorboard_dir)
 
     current_datetime = datetime.now().strftime("%Y%m%d_%H%M")
     model = Sobolev(
         input_dim=len(input_column_names),
-        lr=1e-3,
-        hidden_dims=[512],
+        lr=3e-4,
+        lam1=50,
+        hidden_dims=[512, 512, 512],
         activation="tanh",
     )
     train_dataloder, val_dataloader, test_dataloader, scaler_x, scaler_y = (
         prepare_sobol_dataloaders(
             file_path=file_path,
-            scaler_type=None,
             input_column_names=input_column_names,
             output_column_names=output_column_names,
+            batch_size=100,
+            scaler_type=None,
         )
     )
     tb_logger = TensorBoardLogger(save_dir=tensorboard_dir, name=experiment_name)

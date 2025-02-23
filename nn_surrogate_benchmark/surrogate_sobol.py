@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
-from torch.autograd import Variable
-from torch.optim import AdamW
+from torch.optim import AdamW, Adam
 from typing import Literal
 import pandas as pd
 import numpy as np
@@ -20,7 +19,8 @@ class Sobolev(pl.LightningModule):
 		input_dim: int,
 		hidden_dims: list[int] = [512],
 		activation: Literal["tanh", "relu", "gelu"] = "tanh",
-		lr: float = 1e-3,
+		lam1: float = 1.0,  # Weighting factor for gradient loss
+		lr = 3e-4,
 	) -> None:
 		super().__init__()
 		self.save_hyperparameters()
@@ -31,7 +31,7 @@ class Sobolev(pl.LightningModule):
 			if activation == "tanh":
 				layers.append(nn.Tanh())
 			elif activation == "relu":
-				layers.append(nn.ReLU())
+				layers.append(nn.ReLU(inplace=False))  # Ensure inplace=False
 			else:
 				layers.append(nn.GELU())
 			input_dim = hidden_dim
@@ -39,6 +39,7 @@ class Sobolev(pl.LightningModule):
 		self.net = nn.Sequential(*layers)
 		self.criterion = nn.MSELoss()
 		self.net.apply(self._init_weights)
+
 
 	def _init_weights(self, module):
 		if isinstance(module, nn.Linear):
@@ -53,50 +54,53 @@ class Sobolev(pl.LightningModule):
 				nn.init.zeros_(module.bias)
 
 	def forward(self, x):
-		print(f"Input x requires_grad: {x.requires_grad}")  # Debug: Check input
-		for i, layer in enumerate(self.net):
-			x = layer(x)
-			print(f"Layer {i} output requires_grad: {x.requires_grad}")  # Debug: Check layer output
-		return x
+		return self.net(x)
 
-	def _shared_step(self, batch, stage: str, create_graph: bool = False):
-		x: torch.Tensor
+	def training_step(self, batch, batch_idx):
 		x, y, dy_dx = batch
-		x.requires_grad_(True)
+		x = x.detach().clone().requires_grad_(True)
+
+		# Forward pass
 		preds = self(x)
-		
+
+		# Compute gradients using .backward()
 		grads = torch.autograd.grad(
 			outputs=preds,
 			inputs=x,
-			grad_outputs=torch.ones_like(preds, requires_grad=True),
-			create_graph=create_graph,
-			retain_graph=create_graph,
-			allow_unused=True
+			grad_outputs=torch.ones_like(preds),
+			create_graph=True,
+			retain_graph=True,
 		)[0]
 
+		# Compute losses
 		loss_value = self.criterion(preds, y)
 		loss_grad = self.criterion(grads, dy_dx)
-		total_loss = loss_value + loss_grad
+		total_loss = loss_value + self.hparams.lam1 * loss_grad
 
-		self.log(f"{stage}_loss", total_loss, prog_bar=True, on_epoch=True)
-		self.log(f"{stage}_value_loss", loss_value, on_epoch=True)
-		self.log(f"{stage}_grad_loss", loss_grad, on_epoch=True)
+		# Log losses
+		self.log("train_loss", total_loss, prog_bar=True, on_epoch=True)
+		self.log("train_value_loss", loss_value, on_epoch=True)
+		self.log("train_grad_loss", loss_grad, on_epoch=True)
+
 		return total_loss
 
-	def training_step(self, batch, batch_idx):
-		return self._shared_step(batch, "train", create_graph=True)
-
 	def validation_step(self, batch, batch_idx):
-		return self._shared_step(batch, "val")
+		x, y = batch
+		preds = self(x)
+		loss = self.criterion(preds, y)
+		self.log("val_loss", loss, prog_bar=True, on_epoch=True)
+		return loss
 
 	def test_step(self, batch, batch_idx):
-		return self._shared_step(batch, "test")
+		x, y = batch
+		preds = self(x)
+		loss = self.criterion(preds, y)
+		self.log("test_loss", loss, on_epoch=True, prog_bar=True)
+		return loss
 
 	def configure_optimizers(self):
-		optimizer = AdamW(self.parameters(), lr=self.hparams.lr)
-		scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-			optimizer, mode="min", factor=0.1, patience=5, verbose=True
-		)
+		optimizer = Adam(self.parameters(), lr=self.hparams.lr, weight_decay=1e-5)
+		scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=300, gamma=0.5)
 		return {
 			"optimizer": optimizer,
 			"lr_scheduler": {
@@ -190,14 +194,12 @@ def prepare_sobol_dataloaders(
 	y_train_values = torch.tensor(y_train[:, 0], dtype=torch.float32)
 	y_train_grads = torch.tensor(y_train[:, 1:], dtype=torch.float32)
 	y_val_values = torch.tensor(y_val[:, 0], dtype=torch.float32)
-	y_val_grads = torch.tensor(y_val[:, 1:], dtype=torch.float32)
 	y_test_values = torch.tensor(y_test[:, 0], dtype=torch.float32)
-	y_test_grads = torch.tensor(y_test[:, 1:], dtype=torch.float32)
 
 	# Create datasets
 	train_dataset = TensorDataset(X_train, y_train_values, y_train_grads)
-	val_dataset = TensorDataset(X_val, y_val_values, y_val_grads)
-	test_dataset = TensorDataset(X_test, y_test_values, y_test_grads)
+	val_dataset = TensorDataset(X_val, y_val_values)
+	test_dataset = TensorDataset(X_test, y_test_values)
 
 	# Create dataloaders
 	train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)

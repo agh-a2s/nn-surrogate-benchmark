@@ -28,11 +28,11 @@ def generate_lhs_samples(
 
 def main():
     BOUNDS = [-5.0, 5.0]
-    N_SAMPLES = 10_000
+    N_SAMPLES = 30_000
     GET_GRADIENTS = True
     DIMENSIONS = 2
     INSTANCE_ID = 1
-    FUNCTION_ID = 22
+    FUNCTION_ID = 24
     DATA_DIR = "data"
 
     suite = Suite(
