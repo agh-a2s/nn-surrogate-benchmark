@@ -36,14 +36,15 @@ To modify these parameters, edit the constants in `bbob_sampler.py`.
 The input data should be in CSV format with the following structure:
 - Input features should be named `x1`, `x2`, ..., `xn` where n is the dimension of the input space
 - The target variable should be named `y`
+- Optional gradient columns should be named `dy_dx1`, `dy_dx2`, ..., `dy_dxn` for each input dimension
 - Each row represents one sample point
 - All values should be numeric
 
 Example CSV format:
 ```
-x1,x2,y
-1.234,5.678,9.012
-2.345,6.789,0.123
+x1,x2,y,dy_dx1,dy_dx2
+1.234,5.678,9.012,9.012,9.012
+2.345,6.789,0.123,9.012,9.012
 ...
 ```
 
