@@ -8,7 +8,6 @@ import logging
 from datetime import datetime
 import pytorch_lightning as pl
 from .surrogate import MLP, prepare_dataloaders
-from .model_evaluator import ModelEvaluator
 
 
 logger = logging.getLogger(__name__)
