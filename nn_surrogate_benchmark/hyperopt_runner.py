@@ -23,6 +23,14 @@ def is_port_in_use(port: int) -> bool:
 
 
 def start_optuna_dashboard(storage: str, port: int = 8080) -> subprocess.Popen:
+    if storage.startswith("sqlite:///"):
+        db_path = storage[len("sqlite:///") :]
+        if not os.path.exists(db_path):
+            logger.info(
+                f"Storage file {db_path} does not exist. Skipping Optuna Dashboard."
+            )
+            return None
+
     if not is_port_in_use(port):
         logger.info(f"Starting Optuna Dashboard on port {port}...")
         dashboard_process = subprocess.Popen(

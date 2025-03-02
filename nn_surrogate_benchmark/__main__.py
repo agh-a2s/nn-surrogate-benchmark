@@ -40,7 +40,6 @@ if __name__ == "__main__":
 
     current_datetime = datetime.now().strftime("%Y%m%d_%H%M")
     model = MLP(
-        input_dim=len(column_names),
         lr=1e-3,
         hidden_dims=[512],
         activation="relu",
