@@ -92,6 +92,11 @@ If TensorBoard doesn't open automatically or you want to access it later:
 tensorboard --logdir lightning_logs --port 6006
 ```
 
+### Accessing Optuna Dashboard
+```
+poetry run optuna-dashboard  sqlite:///optuna_results/mlp_hyperopt.db --port 8080
+```
+
 The logs contain:
 - Training and validation metrics
 - Model predictions visualization
