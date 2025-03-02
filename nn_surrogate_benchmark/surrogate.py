@@ -19,8 +19,9 @@ class MLP(pl.LightningModule):
         self,
         input_dim: int,
         hidden_dims: list[int] = [512],
-        activation: Literal["tanh", "relu", "gelu"] = "tanh",
+        activation: Literal["tanh", "relu", "gelu", "leaky_relu"] = "tanh",
         lr: float = 1e-3,
+        layer_norm: bool = False,
     ) -> None:
         super().__init__()
         self.save_hyperparameters()
@@ -32,8 +33,14 @@ class MLP(pl.LightningModule):
                 layers.append(nn.Tanh())
             elif activation == "relu":
                 layers.append(nn.ReLU())
+            elif activation == "leaky_relu":
+                # Magic number from the paper:
+                # Conservative Objective Models for Effective Offline Model-Based Optimization
+                layers.append(nn.LeakyReLU(negative_slope=0.3))
             else:
                 layers.append(nn.GELU())
+            if self.hparams.layer_norm:
+                layers.append(nn.LayerNorm(hidden_dim))
             input_dim = hidden_dim
         layers.append(nn.Linear(input_dim, 1))
         self.net = nn.Sequential(*layers)
@@ -42,7 +49,7 @@ class MLP(pl.LightningModule):
 
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
-            if self.hparams.activation in ["relu", "gelu"]:
+            if self.hparams.activation in ["relu", "gelu", "leaky_relu"]:
                 nn.init.kaiming_normal_(module.weight, nonlinearity="relu")
             else:
                 nn.init.xavier_normal_(

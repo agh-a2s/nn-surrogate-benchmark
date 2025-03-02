@@ -10,13 +10,16 @@ def generate_lhs_samples(
     n_samples: int,
     bounds: tuple[float, float],
     dim: int,
-    criterion: str = "maximin",
+    criterion: str | None = "maximin",
     random_state: int | None = None,
 ):
     if random_state is not None:
         np.random.seed(random_state)
 
-    lhs_raw = lhs(dim, samples=n_samples, criterion=criterion)
+    if criterion is None:
+        lhs_raw = lhs(dim, samples=n_samples)
+    else:
+        lhs_raw = lhs(dim, samples=n_samples, criterion=criterion)
 
     lower, upper = bounds
     scale = upper - lower
@@ -27,7 +30,7 @@ def generate_lhs_samples(
 
 def main():
     BOUNDS = [-5.0, 5.0]
-    N_SAMPLES = 10_000
+    N_SAMPLES = 100_000
     DIMENSIONS = 2
     INSTANCE_ID = 1
     FUNCTION_ID = 1
@@ -49,7 +52,7 @@ def main():
             n_samples=N_SAMPLES,
             bounds=BOUNDS,
             dim=function.dimension,
-            criterion="maximin",
+            criterion=None,
             random_state=42,
         )
         rows = []
