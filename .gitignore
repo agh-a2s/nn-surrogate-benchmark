@@ -3,3 +3,5 @@ lightning_logs/*
 data/*
 .vscode/*
 .DS_Store
+optuna.db
+optuna_results/*
