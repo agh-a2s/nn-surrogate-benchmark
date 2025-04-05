@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
-from torch.optim import AdamW, Adam
+from torch.optim import Adam
 from typing import Literal
 import pandas as pd
 import numpy as np
@@ -12,6 +12,7 @@ from sklearn.preprocessing import (
 	RobustScaler,
 	MaxAbsScaler,
 )
+
 
 class Sobolev(pl.LightningModule):
 	def __init__(
@@ -31,7 +32,7 @@ class Sobolev(pl.LightningModule):
 			if activation == "tanh":
 				layers.append(nn.Tanh())
 			elif activation == "relu":
-				layers.append(nn.ReLU(inplace=False))  # Ensure inplace=False
+				layers.append(nn.ReLU())
 			else:
 				layers.append(nn.GELU())
 			input_dim = hidden_dim
@@ -39,7 +40,6 @@ class Sobolev(pl.LightningModule):
 		self.net = nn.Sequential(*layers)
 		self.criterion = nn.MSELoss()
 		self.net.apply(self._init_weights)
-
 
 	def _init_weights(self, module):
 		if isinstance(module, nn.Linear):

@@ -99,7 +99,6 @@ class ModelEvaluator:
         train_loader: DataLoader | None = None,
         val_loader: DataLoader | None = None,
         test_loader: DataLoader | None = None,
-        grads = False,
     ) -> dict[str, pd.DataFrame]:
         results = {}
 
