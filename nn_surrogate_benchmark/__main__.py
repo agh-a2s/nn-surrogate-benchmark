@@ -42,12 +42,10 @@ if __name__ == "__main__":
     ensure_tensorboard_running(tensorboard_dir)
 
     current_datetime = datetime.now().strftime("%Y%m%d_%H%M")
-    model = Sobolev(
-        input_dim=len(input_column_names),
-        lr=3e-4,
-        lam1=50,
-        hidden_dims=[512, 512, 512],
-        activation="tanh",
+    model = MLP(
+        lr=1e-3,
+        hidden_dims=[512],
+        activation="relu",
     )
     train_dataloder, val_dataloader, test_dataloader, scaler_x, scaler_y = (
         prepare_sobol_dataloaders(

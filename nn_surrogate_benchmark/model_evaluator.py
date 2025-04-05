@@ -10,6 +10,14 @@ from sklearn.preprocessing import (
 )
 import matplotlib.pyplot as plt
 from pytorch_lightning.loggers import TensorBoardLogger
+from scipy.stats import spearmanr, kendalltau
+
+
+def compute_rank_correlation_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
+    rho, _ = spearmanr(y_true, y_pred)
+    tau, _ = kendalltau(y_true, y_pred)
+
+    return {"spearman_rho": rho, "kendall_tau": tau}
 
 
 class ModelEvaluator:
@@ -92,6 +100,11 @@ class ModelEvaluator:
             * 100
         )
         results["dataset"] = dataset_name
+
+        rank_corr = compute_rank_correlation_metrics(
+            results["y_true"], results["y_pred"]
+        )
+        results.attrs["rank_metrics"] = rank_corr
         return results
 
     def evaluate_multiple_sets(
@@ -130,6 +143,16 @@ class ModelEvaluator:
             )
             self._log_prediction_plot(df, dataset_name, current_epoch)
             self._log_contour_plots(df, dataset_name, current_epoch)
+            rank_metrics = df.attrs["rank_metrics"]
+            spearman_rho = rank_metrics["spearman_rho"]
+            kendall_tau = rank_metrics["kendall_tau"]
+
+            self.tb_logger.experiment.add_scalar(
+                f"{dataset_name}/spearman_rho", spearman_rho, current_epoch
+            )
+            self.tb_logger.experiment.add_scalar(
+                f"{dataset_name}/kendall_tau", kendall_tau, current_epoch
+            )
 
     def _log_prediction_plot(
         self, df: pd.DataFrame, dataset_name: str, current_epoch: int
