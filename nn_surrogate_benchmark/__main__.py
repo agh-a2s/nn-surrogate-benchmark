@@ -1,8 +1,10 @@
 from .surrogate import MLP, prepare_dataloaders
+from .surrogate_sobol import Sobolev, prepare_sobol_dataloaders
 from .ela_comparator import SurrogateELAComparator
 from .model_evaluator import ModelEvaluator
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
+from torch.cuda import is_available as is_cuda_available
 from datetime import datetime
 import socket
 import subprocess
@@ -30,11 +32,12 @@ def ensure_tensorboard_running(logdir: str, port: int = 6006) -> None:
 
 
 if __name__ == "__main__":
-    column_names = ["x1", "x2"]
-    file_path = "data/bbob_f003_i01_d02_samples.csv"
-    experiment_name = "bbob_f002"
+    input_column_names = ["x1", "x2"]
+    output_column_names = ["y", "dy_dx1", "dy_dx2"]
+    file_path = "data/bbob_f022_i01_d02_g_samples.csv"
+    experiment_name = "bbob_f022_g"
     tensorboard_dir = "lightning_logs"
-    total_epochs = 100
+    total_epochs = 1000
 
     ensure_tensorboard_running(tensorboard_dir)
 
@@ -45,18 +48,21 @@ if __name__ == "__main__":
         activation="relu",
     )
     train_dataloder, val_dataloader, test_dataloader, scaler_x, scaler_y = (
-        prepare_dataloaders(
+        prepare_sobol_dataloaders(
             file_path=file_path,
+            input_column_names=input_column_names,
+            output_column_names=output_column_names,
+            batch_size=100,
             scaler_type=None,
-            column_names=column_names,
         )
     )
     tb_logger = TensorBoardLogger(save_dir=tensorboard_dir, name=experiment_name)
+    accelerator = "gpu" if is_cuda_available() else "cpu"
     trainer = Trainer(
         max_epochs=total_epochs,
         logger=tb_logger,
         log_every_n_steps=10,
-        accelerator="gpu",
+        accelerator=accelerator,
         devices=1,
     )
 

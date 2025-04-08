@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from scipy.optimize import approx_fprime
 from tqdm import tqdm
 from pyDOE2 import lhs
 from cocoex import Suite
@@ -30,16 +31,17 @@ def generate_lhs_samples(
 
 def main():
     BOUNDS = [-5.0, 5.0]
-    N_SAMPLES = 100_000
+    N_SAMPLES = 30_000
+    GET_GRADIENTS = True
     DIMENSIONS = 2
     INSTANCE_ID = 1
-    FUNCTION_ID = 1
+    FUNCTION_ID = 24
     DATA_DIR = "data"
 
     suite = Suite(
         "bbob",
-        f"instances: {FUNCTION_ID}",
-        f"dimensions: {DIMENSIONS} instance_indices: {INSTANCE_ID}",
+        "",
+        f"function_indices: {FUNCTION_ID}, dimensions: {DIMENSIONS} instance_indices: {INSTANCE_ID}",
     )
 
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -56,17 +58,29 @@ def main():
             random_state=42,
         )
         rows = []
-        for x in tqdm(combinations):
-            f_value = function(x)
-            rows.append(
-                {
-                    **{f"x{i+1}": float(val) for i, val in enumerate(x)},
-                    "y": float(f_value),
-                }
-            )
+        if GET_GRADIENTS:
+            for x in tqdm(combinations):
+                f_value = function(x)
+                grad = approx_fprime(x, function, epsilon=1e-5)
+                rows.append(
+                    {
+                        **{f"x{i+1}": float(val) for i, val in enumerate(x)},
+                        "y": float(f_value),
+                        **{f"dy_dx{i+1}": val for i, val in enumerate(grad)},
+                    }
+                )
+        else:
+            for x in tqdm(combinations):
+                f_value = function(x)
+                rows.append(
+                    {
+                        **{f"x{i+1}": float(val) for i, val in enumerate(x)},
+                        "y": float(f_value),
+                    }
+                )
 
         df = pd.DataFrame(rows)
-        filename = f"{DATA_DIR}/{function.id}_samples.csv"
+        filename = f"{DATA_DIR}/{function.id}_{'g' if GET_GRADIENTS else 'ng'}_samples.csv"
         df.to_csv(filename, index=False)
         print(f"Saved to {filename}")
 

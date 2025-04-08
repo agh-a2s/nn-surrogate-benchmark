@@ -49,9 +49,8 @@ class SurrogateELAComparator:
         y_list: list[np.ndarray] = []
         total_points = 0
 
-        for X_batch, y_batch in dataloader:
-            batch_X = self._prepare_data(X_batch)[0]
-            batch_y = self._prepare_data(y_batch)[0]
+        for batch in dataloader:
+            batch_X, batch_y = self._prepare_data(batch[0], batch[1])
 
             if n_points is not None:
                 remaining = n_points - total_points
