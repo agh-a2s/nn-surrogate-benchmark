@@ -1,5 +1,4 @@
 from scipy.interpolate import RBFInterpolator
-from datetime import datetime
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -30,7 +29,6 @@ if __name__ == "__main__":
 
         print(f"Processing function {function_id}...")
         rbf = RBFInterpolator(X_train, y_train, kernel="linear")
-        print(f"RBF model created with kernel='gaussian'")
 
         y_pred = rbf(X_test)
 
