@@ -1,20 +1,15 @@
 from ..surrogate import MLP, prepare_dataloaders
-from ..surrogate_sobol import Sobolev, prepare_sobol_dataloaders
-from ..ela_comparator import SurrogateELAComparator
-from ..model_evaluator import ModelEvaluator, compute_rank_correlation_metrics
+from ..model_evaluator import compute_rank_correlation_metrics
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch.cuda import is_available as is_cuda_available
 from datetime import datetime
-import socket
-import subprocess
-import time
-import webbrowser
 import numpy as np
 import pandas as pd
 import torch
 from sklearn.metrics import mean_squared_error, r2_score
 import os
+from ..tensorboard import ensure_tensorboard_running
 
 
 class ModelPerformanceTracker:
@@ -94,25 +89,6 @@ class ModelPerformanceTracker:
         print(f"Results saved to {filepath}")
 
         return filepath
-
-
-def is_port_in_use(port: int) -> bool:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(("localhost", port)) == 0
-
-
-def ensure_tensorboard_running(logdir: str, port: int = 6006) -> None:
-    if not is_port_in_use(port):
-        print(f"Starting TensorBoard on port {port}...")
-        subprocess.Popen(
-            ["tensorboard", "--logdir", logdir, "--port", str(port)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        time.sleep(5)
-        webbrowser.open(f"http://localhost:{port}")
-    else:
-        print(f"TensorBoard already running on port {port}")
 
 
 N_LAYERS = 3
